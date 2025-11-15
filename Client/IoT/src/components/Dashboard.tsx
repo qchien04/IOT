@@ -121,7 +121,7 @@ const Dashboard: React.FC = () => {
             clearAlert={clearGasAlert}
           />
           <div style={{ height: 12 }} />
-          <CameraPanel imageUrl={state.cameraImageUrl} />
+          <CameraPanel streamUrl={state.cameraImageUrl} />
         </div>
       </div>
     </div>

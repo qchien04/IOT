@@ -190,6 +190,15 @@ wss.on('connection', (ws) => {
           systemState.gasAlert = false;
         }
       }
+      if (data.Humidity !== undefined) {
+        systemState.humidity = data.Humidity;
+        console.log('Cập nhật Humidity:', systemState.humidity);
+      }
+      if (data.Temperature !== undefined) {
+        systemState.temperature = data.Temperature;
+        console.log('Cập nhật Temperature:', systemState.temperature);
+      }
+      
     } catch (err) {
       console.error('Lỗi parse JSON:', err);
     }

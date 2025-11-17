@@ -3,10 +3,9 @@ import React from 'react';
 interface Props {
   gasDetected: boolean;
   gasAlert: boolean;
-  clearAlert: () => void;
 }
 
-const GasPanel: React.FC<Props> = ({ gasDetected, gasAlert, clearAlert }) => (
+const GasPanel: React.FC<Props> = ({ gasDetected, gasAlert }) => (
   <div>
     <h3>Khí Gas</h3>
     <div style={{ marginTop: 8 }}>
@@ -17,9 +16,6 @@ const GasPanel: React.FC<Props> = ({ gasDetected, gasAlert, clearAlert }) => (
             <div className="small">
               Nồng độ khí vượt ngưỡng an toàn. Kiểm tra nguồn gas và mở thông gió.
             </div>
-            <button className="button" onClick={clearAlert}>
-              Dừng cảnh báo
-            </button>
           </div>
         </div>
       ) : (

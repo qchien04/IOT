@@ -1,20 +1,45 @@
+// Types
 export interface Sensors {
   temperature: number;
   humidity: number;
   gas: number;
+  rainValue: number;
 }
 
 export interface Devices {
-  fan: boolean;
   doorOpen: boolean;
-  awningOpen: boolean;
+  roofOpen: boolean;
+  ledPIR: boolean;
+  gasBuzzer: boolean;
 }
 
-export interface DashboardState {
+export interface AutoModes {
+  autoDoor: boolean;
+  autoRoof: boolean;
+  autoPIR: boolean;
+  autoGasBuzzer: boolean;
+}
+
+export interface SystemState {
   sensors: Sensors;
   devices: Devices;
-  gasDetected: boolean;
-  gasAlert: boolean;
+  autoModes: AutoModes;
   cameraImageUrl: string;
+  roofPosition: number;
+  doorPosition: number;
   connected: boolean;
+}
+
+export interface Config {
+  ROOF_OPEN_CORNER: number;
+  ROOF_CLOSE_CORNER: number;
+  DOOR_OPEN: number;
+  DOOR_CLOSE: number;
+  GAS_THRESHOLD: number;
+  RAIN_THRESHOLD: number;
+
+  sendInterval : number;
+  dhtInterval  : number;
+  lcdInterval  : number;
+  gasInterval  : number;
 }

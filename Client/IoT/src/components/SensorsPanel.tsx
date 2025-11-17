@@ -1,24 +1,54 @@
-import React from 'react';
+import React, { useState } from 'react';
 import type { Sensors } from './types';
+import SensorCard from './SensorCard';
+import SensorHistoryModal from './SensorHistoryModal';
 
-interface Props {
-  sensors: Sensors;
-}
+const SensorsPanel: React.FC<{ sensors: Sensors }> = ({ sensors }) => {
+  const [selectedSensor, setSelectedSensor] = useState<'temperature' | 'humidity' | 'gas' | 'rainValue' | null>(null);
 
-const SensorsPanel: React.FC<Props> = ({ sensors }) => (
-  <div>
-    <h3>Cảm biến</h3>
-    <div style={{ marginTop: 8 }}>
-      <div className="sensor">
-        <div>
-          <div className="kv">Dữ liệu cảm biến</div>
-          <div className="value">🌡️ Nhiệt độ: {sensors.temperature} °C</div>
-          <div className="small">💧 Độ ẩm: {sensors.humidity}%</div>
-          <div className="small">🔥 Khí gas: {sensors.gas}</div>
-        </div>
-      </div>
-    </div>
-  </div>
-);
+  return (
+    <>
+      <SensorCard
+        icon="🌡️"
+        label="Nhiệt độ"
+        value={sensors.temperature.toFixed(1)}
+        unit="°C"
+        color="#f59e0b"
+        onClick={() => setSelectedSensor('temperature')}
+      />
+      <SensorCard
+        icon="💧"
+        label="Độ ẩm"
+        value={sensors.humidity.toFixed(0)}
+        unit="%"
+        color="#06b6d4"
+        onClick={() => setSelectedSensor('humidity')}
+      />
+      <SensorCard
+        icon="🔥"
+        label="Khí Gas"
+        value={sensors.gas.toFixed(0)}
+        unit=""
+        color="#ef4444"
+        onClick={() => setSelectedSensor('gas')}
+      />
+      <SensorCard
+        icon="🌧️"
+        label="Độ mưa"
+        value={sensors.rainValue.toFixed(0)}
+        unit=""
+        color="#ef4444"
+        onClick={() => setSelectedSensor('rainValue')}
+      />
+
+      {selectedSensor && (
+        <SensorHistoryModal
+          sensorType={selectedSensor}
+          onClose={() => setSelectedSensor(null)}
+        />
+      )}
+    </>
+  );
+};
 
 export default SensorsPanel;

@@ -5,6 +5,7 @@ const http = require('http');
 const socketIO = require('socket.io');
 const WebSocket = require('ws');
 const mysql = require('mysql2/promise');
+const { config } = require('dotenv');
 require('dotenv').config();
 const app = express();
 const server = http.createServer(app);
@@ -110,7 +111,7 @@ async function getSensorHistory(sensorType, timeRange) {
       '48h': 48,
       '7d': 168
     };
-y
+
     const hours = timeMap[timeRange];
     if (!hours) {
       throw new Error('Invalid time range');
@@ -176,8 +177,8 @@ async function getConfig() {
   } catch (error) {
     console.error('Error fetching config:', error);
     return {
-      ROOF_OPEN_CORNER: 110,
-      ROOF_CLOSE_CORNER: 20,
+      ROOF_OPEN_CORNER: 15,
+      ROOF_CLOSE_CORNER: 120,
       DOOR_OPEN: 180,
       DOOR_CLOSE: 100
     };
@@ -198,13 +199,15 @@ let systemState = {
     doorOpen: false,
     roofOpen: false,
     ledPIR: false,
-    gasBuzzer: false
+    gasBuzzer: false,
+    ledBedRoom: false,
+    camBuzzer: false
   },
   autoModes: {
     autoDoor: false,
     autoRoof: false,
     autoPIR: false,
-    autoGasBuzzer: false
+    autoGasBuzzer: false,
   },
   cameraImageUrl: 'http://192.168.43.168:5000/stream',
   roofPosition: 0,
@@ -212,10 +215,10 @@ let systemState = {
 };
 
 let Config = {
-  ROOF_OPEN_CORNER: 110,
-  ROOF_CLOSE_CORNER: 20,
-  DOOR_OPEN: 180,
-  DOOR_CLOSE: 100,
+  ROOF_OPEN_CORNER: 30,
+  ROOF_CLOSE_CORNER: 120,
+  DOOR_OPEN_CORNER: 180,
+  DOOR_CLOSE_CORNER: 100,
   RAIN_THRESHOLD: 2000,
   GAS_THRESHOLD: 200,
 
@@ -230,6 +233,7 @@ let Config = {
 getConfig().then(dbConfig => {
   Config = { ...Config, ...dbConfig };
   console.log('✅ Config loaded from database:', Config);
+  
 });
 
 // ============================================
@@ -316,14 +320,17 @@ app.get('/api/config', async (req, res) => {
 app.post('/api/config', async (req, res) => {
   try {
     const config = req.body;
-
+    console.log("send fix config+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+    console.log(config);
+    console.log("send fix config+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
     for (const key in config) {
       await updateConfig(key, config[key]);
     }
 
     wss.clients.forEach(client => {
       if (client.readyState === WebSocket.OPEN) {
-        client.send(JSON.stringify({ type: 'config', config }));
+        console.log("send fix config+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+        client.send(JSON.stringify({ type: 'config', config: config }));
       }
     });
 
@@ -461,7 +468,7 @@ io.on('connection', (socket) => {
         if (wsClient.readyState === WebSocket.OPEN) {
           wsClient.send(JSON.stringify({
             type: 'doorOpen',
-            position: systemState.doorPosition
+            value: systemState.devices.doorOpen
           }));
         }
       });
@@ -470,7 +477,10 @@ io.on('connection', (socket) => {
     if (device === 'roofOpen') {
       systemState.devices.roofOpen = value;
       systemState.roofPosition = value ? Config.ROOF_OPEN_CORNER : Config.ROOF_CLOSE_CORNER;
-
+      console.log("-------------------------------")
+      console.log(systemState.devices.roofOpen)
+      console.log(systemState.roofPosition)
+      console.log("-------------------------------")
       // Log to database
       await logDeviceAction('roofOpen', value, systemState.autoModes.autoRoof ? 'auto' : 'manual');
 
@@ -479,7 +489,7 @@ io.on('connection', (socket) => {
         if (wsClient.readyState === WebSocket.OPEN) {
           wsClient.send(JSON.stringify({
             type: 'roofOpen',
-            position: systemState.roofPosition
+            value: systemState.devices.roofOpen
           }));
         }
       });
@@ -513,6 +523,34 @@ io.on('connection', (socket) => {
         if (wsClient.readyState === WebSocket.OPEN) {
           wsClient.send(JSON.stringify({
             type: 'gasBuzzer',
+            value: value
+          }));
+        }
+      });
+    }
+
+    if (device === 'ledBedRoom') {
+      systemState.devices.ledBedRoom = value;
+
+      // Send to ESP32
+      wss.clients.forEach((wsClient) => {
+        if (wsClient.readyState === WebSocket.OPEN) {
+          wsClient.send(JSON.stringify({
+            type: 'ledBedRoom',
+            value: value
+          }));
+        }
+      });
+    }
+
+    if (device === 'camBuzzer') {
+      systemState.devices.camBuzzer = value;
+
+      // Send to ESP32
+      wss.clients.forEach((wsClient) => {
+        if (wsClient.readyState === WebSocket.OPEN) {
+          wsClient.send(JSON.stringify({
+            type: 'camBuzzer',
             value: value
           }));
         }
@@ -611,20 +649,79 @@ wss.on('connection', (ws) => {
       if (data.gasBuzzer !== undefined) {
         systemState.devices.gasBuzzer = data.gasBuzzer;
       }
+      if (data.ledBedRoom !== undefined) {
+        systemState.devices.ledBedRoom = data.ledBedRoom;
+      }
+      if (data.camBuzzer !== undefined) {
+        systemState.devices.camBuzzer = data.camBuzzer;
+      }
 
+      let isChange=false;
       // Update auto modes from ESP32
       if (data.autoDoor !== undefined) {
-        systemState.autoModes.autoDoor = data.autoDoor;
+        if(systemState.autoModes.autoDoor != data.autoDoor){
+          isChange=true;
+          wss.clients.forEach(c => {
+            if (c.readyState === WebSocket.OPEN) {
+              c.send(JSON.stringify({
+                type: "mode",
+                module: "autoDoor",
+                auto: systemState.autoModes.autoDoor
+              }));
+            }
+          });
+        }
       }
       if (data.autoRoof !== undefined) {
-        systemState.autoModes.autoRoof = data.autoRoof;
+        if(systemState.autoModes.autoRoof != data.autoRoof){
+          isChange=true;
+          wss.clients.forEach(c => {
+            if (c.readyState === WebSocket.OPEN) {
+              c.send(JSON.stringify({
+                type: "mode",
+                module: "autoRoof",
+                auto: systemState.autoModes.autoRoof
+              }));
+            }
+          });
+        }
       }
       if (data.autoPIR !== undefined) {
-        systemState.autoModes.autoPIR = data.autoPIR;
+        if(systemState.autoModes.autoPIR != data.autoPIR){
+          isChange=true;
+          wss.clients.forEach(c => {
+            if (c.readyState === WebSocket.OPEN) {
+              c.send(JSON.stringify({
+                type: "mode",
+                module: "autoPIR",
+                auto: systemState.autoModes.autoPIR
+              }));
+            }
+          });
+        }
       }
       if (data.autoGasBuzzer !== undefined) {
-        systemState.autoModes.autoGasBuzzer = data.autoGasBuzzer;
+        if(systemState.autoModes.autoGasBuzzer != data.autoGasBuzzer){
+          isChange=true;
+          wss.clients.forEach(c => {
+            if (c.readyState === WebSocket.OPEN) {
+              c.send(JSON.stringify({
+                type: "mode",
+                module: "autoGasBuzzer",
+                auto: systemState.autoModes.autoGasBuzzer
+              }));
+            }
+          });
+        }
       }
+
+      // if(isChange===true){
+      //   wss.clients.forEach(client => {
+      //     if (client.readyState === WebSocket.OPEN) {
+      //       client.send(JSON.stringify({ type: 'config', config: systemState.autoModes }));
+      //     }
+      //   });
+      // }
 
     } catch (err) {
       console.error('❌ Error parsing JSON from ESP32:', err);
@@ -641,9 +738,9 @@ wss.on('connection', (ws) => {
 });
 
 setInterval(() => {
-  console.log("🔥 Sending device state to clients:", systemState.devices);
-  io.emit('state:sync', systemState.devices);
-}, 5000);
+  //console.log("🔥 Sending state to clients:", systemState);
+  io.emit('state:sync', systemState);
+}, 1000);
 
 // ============================================
 // START SERVER

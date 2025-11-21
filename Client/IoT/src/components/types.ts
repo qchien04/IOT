@@ -11,6 +11,8 @@ export interface Devices {
   roofOpen: boolean;
   ledPIR: boolean;
   gasBuzzer: boolean;
+  ledBedRoom: boolean;
+  camBuzzer: boolean;
 }
 
 export interface AutoModes {

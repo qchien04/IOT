@@ -15,7 +15,7 @@ const DeviceCard: React.FC<{
   const isAuto = autoModes[autoMode];
   
   return (
-    <div style={{
+    <div  style={{
       background: 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)',
       border: '1px solid rgba(255,255,255,0.08)',
       borderRadius: 20,
@@ -24,8 +24,7 @@ const DeviceCard: React.FC<{
       overflow: 'hidden',
       transition: 'all 0.3s ease',
     }}>
-      {/* Glow effect when active */}
-      {isOn && (
+      {isOn ? (
         <div style={{
           position: 'absolute',
           top: 0,
@@ -35,7 +34,7 @@ const DeviceCard: React.FC<{
           background: 'linear-gradient(90deg, #667eea 0%, #764ba2 100%)',
           boxShadow: '0 0 20px rgba(102, 126, 234, 0.5)',
         }} />
-      )}
+      ): null}
       
       <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 20 }}>
         <div style={{

@@ -41,8 +41,8 @@ const ConfigModal: React.FC<Props> = ({ config, setConfig, setShowConfig, handle
             {[
                 { key: 'ROOF_OPEN_CORNER', label: '🏠 Mái mở (góc)' },
                 { key: 'ROOF_CLOSE_CORNER', label: '🏠 Mái đóng (góc)' },
-                { key: 'DOOR_OPEN', label: '🚪 Cửa mở (góc)' },
-                { key: 'DOOR_CLOSE', label: '🚪 Cửa đóng (góc)' },
+                { key: 'DOOR_OPEN_CORNER', label: '🚪 Cửa mở (góc)' },
+                { key: 'DOOR_CLOSE_CORNER', label: '🚪 Cửa đóng (góc)' },
                 { key: 'GAS_THRESHOLD', label: '🔥 Ngưỡng gas cảnh báo' },
                 { key: 'RAIN_THRESHOLD', label: '🌧️ Ngưỡng mưa cảnh báo' },
                 { key: 'sendInterval', label: '🌐 Gửi dữ liệu (ms)' },

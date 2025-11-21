@@ -55,6 +55,28 @@ const ControlsPanel: React.FC<{
         toggleDevice={toggleDevice}
         toggleMode={toggleMode}
       />
+      
+      <DeviceCard
+        icon="👤"
+        title="Điên phòng ngủ"
+        device="ledBedRoom"
+        devices={devices}
+        autoMode="autoGasBuzzer"
+        autoModes={autoModes}
+        toggleDevice={toggleDevice}
+        toggleMode={toggleMode}
+      />
+
+      <DeviceCard
+        icon="👤"
+        title="Còi CamerA"
+        device="camBuzzer"
+        devices={devices}
+        autoMode="autoGasBuzzer"
+        autoModes={autoModes}
+        toggleDevice={toggleDevice}
+        toggleMode={toggleMode}
+      />
     </div>
   </div>
 );

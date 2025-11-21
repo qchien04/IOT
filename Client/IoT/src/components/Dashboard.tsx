@@ -11,7 +11,7 @@ import './Dashboard.css';
 const Dashboard: React.FC = () => {
   const [state, setState] = useState<SystemState>({
     sensors: { temperature: 25, humidity: 60, gas: 20, rainValue: 0 },
-    devices: { doorOpen: false, roofOpen: false, ledPIR: false, gasBuzzer: false },
+    devices: { doorOpen: false, roofOpen: false, ledPIR: false, gasBuzzer: false, ledBedRoom: false, camBuzzer: false },
     autoModes: { autoDoor: false, autoRoof: false, autoPIR: false, autoGasBuzzer: false },
     cameraImageUrl: 'http://192.168.43.168:5000/stream',
     roofPosition: 0,

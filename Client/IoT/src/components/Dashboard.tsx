@@ -6,7 +6,7 @@ import ControlsPanel from "./ControlsPanel";
 import CameraPanel from "./CameraPanel";
 import ConfigModal from "./ConfigModal";
 import DeviceLogsModal from './DeviceLogsModal';
-import GasPanel from "./GasPanel";
+import AlertPanel from "./AlertPanel";
 import './Dashboard.css';
 
 const Dashboard: React.FC = () => {
@@ -285,7 +285,7 @@ const Dashboard: React.FC = () => {
           {/* Right column - Camera and Gas */}
           <div className="right-column">
             <CameraPanel streamUrl={state.cameraImageUrl} />
-            <GasPanel gasDetected={true} gasAlert={true} />
+            <AlertPanel/>
           </div>
         </div>
       </div>

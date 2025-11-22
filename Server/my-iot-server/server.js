@@ -244,7 +244,7 @@ getConfig().then(dbConfig => {
 app.get('/api/sensors/history', async (req, res) => {
   try {
     const { type, range } = req.query;
-
+    
     if (!type || !['temperature', 'humidity', 'gas', 'rainValue'].includes(type)) {
       return res.status(400).json({ error: 'Invalid sensor type' });
     }
@@ -254,52 +254,36 @@ app.get('/api/sensors/history', async (req, res) => {
     }
 
     const history = await getSensorHistory(type, range);
-    res.json(history);
-  } catch (error) {
-    console.error('API Error:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
 
-// GET /api/sensors/latest
-app.get('/api/sensors/latest', async (req, res) => {
-  try {
-    const [rows] = await dbPool.query(
-      'SELECT * FROM sensor_data ORDER BY timestamp DESC LIMIT 1'
-    );
-    res.json(rows[0] || systemState.sensors);
-  } catch (error) {
-    console.error('API Error:', error);
-    res.json(systemState.sensors);
-  }
-});
-
-// GET /api/sensors/stats
-app.get('/api/sensors/stats', async (req, res) => {
-  try {
-    const { range = '24h' } = req.query;
-    const hours = range === '24h' ? 24 : range === '48h' ? 48 : 168;
-
-    const [rows] = await dbPool.execute(`
+    const timeMap = {
+      '24h': 24,
+      '48h': 48,
+      '7d': 168
+    };
+    const hours = timeMap[range];
+    const [statsResult] = await dbPool.execute(`
       SELECT 
-        MIN(temperature) as min_temp,
-        MAX(temperature) as max_temp,
-        AVG(temperature) as avg_temp,
-        MIN(humidity) as min_humidity,
-        MAX(humidity) as max_humidity,
-        AVG(humidity) as avg_humidity,
-        MIN(gas) as min_gas,
-        MAX(gas) as max_gas,
-        AVG(gas) as avg_gas,
-        MIN(rainValue) as min_rain,
-        MAX(rainValue) as max_rain,
-        AVG(rainValue) as avg_rain,
-        COUNT(*) as data_points
+        (SELECT \`${type}\` FROM sensor_data 
+         WHERE timestamp >= DATE_SUB(NOW(), INTERVAL ? HOUR)
+         ORDER BY timestamp DESC LIMIT 1) as current_value,
+        AVG(\`${type}\`) as avg_value,
+        MIN(\`${type}\`) as min_value,
+        MAX(\`${type}\`) as max_value
       FROM sensor_data
       WHERE timestamp >= DATE_SUB(NOW(), INTERVAL ? HOUR)
-    `, [hours]);
+    `, [hours, hours]);
 
-    res.json(rows[0]);
+    const stats = {
+      current: parseFloat(statsResult[0].current_value) || 0,
+      avg: parseFloat(statsResult[0].avg_value) || 0,
+      min: parseFloat(statsResult[0].min_value) || 0,
+      max: parseFloat(statsResult[0].max_value) || 0,
+    };
+
+    res.json({
+      data: history,
+      stats: stats
+    });
   } catch (error) {
     console.error('API Error:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -412,6 +396,27 @@ app.get('/api/alerts', async (req, res) => {
     
     const [rows] = await dbPool.execute(query, params);
     res.json(rows);
+  } catch (error) {
+    console.error('API Error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// GET /api/alerts/status
+app.get('/api/alerts/status', async (req, res) => {
+  try {
+    const hours = 24; // dùng số, không dùng '24h'
+    
+    const query = `
+      SELECT COUNT(*) AS alertCount
+      FROM alerts
+      WHERE created_at >= DATE_SUB(NOW(), INTERVAL ${hours} HOUR)
+      AND resolved = false
+    `;
+    
+    const [rows] = await dbPool.execute(query);
+
+    res.json({ count: rows[0].alertCount });
   } catch (error) {
     console.error('API Error:', error);
     res.status(500).json({ error: 'Internal server error' });

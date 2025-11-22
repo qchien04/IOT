@@ -3,9 +3,9 @@ import Dashboard from './components/Dashboard';
 export default function App() {
   return (
     <div className="app"> 
-      <header className="app-header">
+      {/* <header className="app-header">
         <h1>🏠 IoT Home Control Dashboard</h1>
-      </header>
+      </header> */}
 
       <main>
         <Dashboard />

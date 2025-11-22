@@ -246,7 +246,7 @@ const DeviceLogsModal: React.FC<Props> = memo(({ onClose }) => {
             {['24h', '48h', '7d'].map((range) => (
               <button
                 key={range}
-                onClick={() => setTimeRange(range as any)}
+                onClick={() => setTimeRange(range as '24h' | '48h' | '7d')}
                 style={{
                   padding: '8px 16px',
                   background: timeRange === range ? 'rgba(59, 130, 246, 0.3)' : 'rgba(255,255,255,0.05)',

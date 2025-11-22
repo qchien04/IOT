@@ -18,7 +18,6 @@ const ControlsPanel: React.FC<{
         title="Cửa ra vào"
         device="doorOpen"
         devices={devices}
-        autoMode="autoDoor"
         autoModes={autoModes}
         position={doorPosition}
         toggleDevice={toggleDevice}

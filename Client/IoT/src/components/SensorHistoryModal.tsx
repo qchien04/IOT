@@ -1,6 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, type TooltipProps } from 'recharts';
+interface SensorHistoryData {
+  timestamp: string;
+  value: number;
+}
+interface ChartPoint {
+  value: number;
+  payload: SensorHistoryData;
+}
 interface SensorHistoryData {
   timestamp: string;
   value: number;
@@ -16,6 +23,13 @@ const SensorHistoryModal: React.FC<Props> = React.memo(({ sensorType, onClose })
   const [timeRange, setTimeRange] = useState<'24h' | '48h' | '7d'>('24h');
   const [data, setData] = useState<SensorHistoryData[]>([]);
   const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState({
+    current: 0,
+    avg: 0,
+    min: 0,
+    max: 0,
+  });
+
 
   const sensorConfig = {
     temperature: {
@@ -60,26 +74,23 @@ const SensorHistoryModal: React.FC<Props> = React.memo(({ sensorType, onClose })
       setLoading(true);
       
       try {
-        const response = await fetch(`http://localhost:3000/api/sensors/history?type=${sensorType}&range=${timeRange}`);
+        const response = await fetch(
+          `http://localhost:3000/api/sensors/history?type=${sensorType}&range=${timeRange}`
+        );
         
         if (!response.ok) {
           throw new Error('Failed to fetch sensor history');
         }
         
-        const historyData = await response.json();
+        const result = await response.json();
         
-        // Transform data to expected format
-        const transformedData: SensorHistoryData[] = historyData.map((item: any) => ({
-          timestamp: item.timestamp,
-          value: item.value,
-        }));
+        setData(result.data);
+        setStats(result.stats);
         
-        setData(transformedData);
       } catch (error) {
         console.error('Error fetching sensor history:', error);
-        
-        // Fallback to empty data or show error message
         setData([]);
+        setStats({ current: 0, avg: 0, min: 0, max: 0 });
       } finally {
         setLoading(false);
       }
@@ -96,7 +107,11 @@ const SensorHistoryModal: React.FC<Props> = React.memo(({ sensorType, onClose })
     return date.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
   };
 
-  const CustomTooltip = ({ active, payload }: any) => {
+  const CustomTooltip = ({
+    active,
+    payload,
+  }: TooltipProps<number, string> & { payload?: ChartPoint[] }) => {
+
     if (active && payload && payload.length) {
       const data = payload[0];
       const date = new Date(data.payload.timestamp);
@@ -121,18 +136,7 @@ const SensorHistoryModal: React.FC<Props> = React.memo(({ sensorType, onClose })
     return null;
   };
 
-  const stats = data.length > 0 ? {
-    current: data[data.length - 1].value,
-    avg: data.reduce((sum, d) => sum + d.value, 0) / data.length,
-    min: Math.min(...data.map(d => d.value)),
-    max: Math.max(...data.map(d => d.value)),
-  } : {
-    current: 0,
-    avg: 0,
-    min: 0,
-    max: 0,
-  };
-
+  
   return (
     <div 
       style={{
@@ -207,7 +211,7 @@ const SensorHistoryModal: React.FC<Props> = React.memo(({ sensorType, onClose })
           ].map((option) => (
             <button
               key={option.value}
-              onClick={() => setTimeRange(option.value as any)}
+              onClick={() => setTimeRange(option.value as '24h' | '48h' | '7d')}
               style={{
                 flex: 1,
                 padding: '12px 20px',

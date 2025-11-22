@@ -1,14 +1,20 @@
 import type { AutoModes, Config, Devices, Sensors, SystemState } from "./types";
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { io, Socket } from 'socket.io-client';
 import SensorsPanel from "./SensorsPanel";
 import ControlsPanel from "./ControlsPanel";
 import CameraPanel from "./CameraPanel";
 import ConfigModal from "./ConfigModal";
+import DeviceLogsModal from './DeviceLogsModal';
 import GasPanel from "./GasPanel";
 import './Dashboard.css';
 
 const Dashboard: React.FC = () => {
+  const [showLogs, setShowLogs] = useState(false);
+  const handleCloseLogs = useCallback(() => {
+    setShowLogs(false);
+  }, []);
+
   const [state, setState] = useState<SystemState>({
     sensors: { temperature: 25, humidity: 60, gas: 20, rainValue: 0 },
     devices: { doorOpen: false, roofOpen: false, ledPIR: false, gasBuzzer: false, ledBedRoom: false, camBuzzer: false },
@@ -191,6 +197,14 @@ const Dashboard: React.FC = () => {
           
           <div className="header-actions">
             <button
+              onClick={() => setShowLogs(true)}
+              className="config-button"
+              style={{ marginRight: 12 }}
+            >
+              📋 Nhật ký
+            </button>
+
+            <button
               onClick={() => setShowConfig(!showConfig)}
               className="config-button"
             >
@@ -213,6 +227,10 @@ const Dashboard: React.FC = () => {
           setShowConfig={setShowConfig}
           handleConfigUpdate={handleConfigUpdate}
         />
+      )}
+
+      {showLogs && (
+        <DeviceLogsModal onClose={handleCloseLogs} />
       )}
       
       {/* Main Content */}

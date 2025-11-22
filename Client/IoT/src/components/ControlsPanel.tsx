@@ -25,7 +25,7 @@ const ControlsPanel: React.FC<{
         toggleMode={toggleMode}
       />
       <DeviceCard
-        icon="🏠"
+        icon="⛺"
         title="Mái che"
         device="roofOpen"
         devices={devices}
@@ -57,22 +57,20 @@ const ControlsPanel: React.FC<{
       />
       
       <DeviceCard
-        icon="👤"
-        title="Điên phòng ngủ"
+        icon="💡"
+        title="Điện phòng ngủ"
         device="ledBedRoom"
         devices={devices}
-        autoMode="autoGasBuzzer"
         autoModes={autoModes}
         toggleDevice={toggleDevice}
         toggleMode={toggleMode}
       />
 
       <DeviceCard
-        icon="👤"
+        icon="🚨"
         title="Còi CamerA"
         device="camBuzzer"
         devices={devices}
-        autoMode="autoGasBuzzer"
         autoModes={autoModes}
         toggleDevice={toggleDevice}
         toggleMode={toggleMode}

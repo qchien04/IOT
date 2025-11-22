@@ -1,19 +1,20 @@
 import type { Devices, AutoModes } from "./types";
 import Toggle from "./Toggle";
+
 const DeviceCard: React.FC<{
   icon: string;
   title: string;
   device: keyof Devices;
   devices: Devices;
-  autoMode: keyof AutoModes;
+  autoMode?: keyof AutoModes;
   autoModes: AutoModes;
   position?: number;
   toggleDevice: (key: keyof Devices) => void;
   toggleMode: (key: keyof AutoModes) => void;
 }> = ({ icon, title, device, devices, autoMode, autoModes, position, toggleDevice, toggleMode }) => {
   const isOn = devices[device];
-  const isAuto = autoModes[autoMode];
   
+  const isAuto = autoMode? autoModes[autoMode]: null;
   return (
     <div  style={{
       background: 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)',
@@ -100,13 +101,15 @@ const DeviceCard: React.FC<{
           label={isOn ? 'Đang bật' : 'Đã tắt'}
           on={isOn}
           onClick={() => toggleDevice(device)}
-          disabled={isAuto}
+          disabled={isAuto==null?false:isAuto}
         />
+        {autoMode &&
         <Toggle
           label="Chế độ tự động"
-          on={isAuto}
+          on={isAuto!}
           onClick={() => toggleMode(autoMode)}
-        />
+        />}
+        
       </div>
     </div>
   );

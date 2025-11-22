@@ -11,7 +11,8 @@ interface Props {
   onClose: () => void;
 }
 
-const SensorHistoryModal: React.FC<Props> = ({ sensorType, onClose }) => {
+const SensorHistoryModal: React.FC<Props> = React.memo(({ sensorType, onClose }) => {
+  console.log("ve bieu do---------------------------")
   const [timeRange, setTimeRange] = useState<'24h' | '48h' | '7d'>('24h');
   const [data, setData] = useState<SensorHistoryData[]>([]);
   const [loading, setLoading] = useState(true);
@@ -355,6 +356,6 @@ const SensorHistoryModal: React.FC<Props> = ({ sensorType, onClose }) => {
       `}</style>
     </div>
   );
-};
+});
 
 export default SensorHistoryModal;

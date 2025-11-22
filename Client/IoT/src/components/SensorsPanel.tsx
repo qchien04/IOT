@@ -1,10 +1,13 @@
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import type { Sensors } from './types';
 import SensorCard from './SensorCard';
 import SensorHistoryModal from './SensorHistoryModal';
 
 const SensorsPanel: React.FC<{ sensors: Sensors }> = ({ sensors }) => {
   const [selectedSensor, setSelectedSensor] = useState<'temperature' | 'humidity' | 'gas' | 'rainValue' | null>(null);
+  const handleClose = useCallback(() => {
+    setSelectedSensor(null);
+  }, []);
 
   return (
     <>
@@ -44,7 +47,7 @@ const SensorsPanel: React.FC<{ sensors: Sensors }> = ({ sensors }) => {
       {selectedSensor && (
         <SensorHistoryModal
           sensorType={selectedSensor}
-          onClose={() => setSelectedSensor(null)}
+          onClose={handleClose}
         />
       )}
     </>

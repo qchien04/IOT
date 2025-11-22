@@ -341,100 +341,94 @@ app.post('/api/config', async (req, res) => {
   }
 });
 
-// GET /api/camera/detections - Get camera detection history
-app.get('/api/camera/detections', async (req, res) => {
+// GET /api/device-logs
+app.get('/api/device-logs', async (req, res) => {
   try {
-    const { range = 'today' } = req.query;
-
-    const now = new Date();
-    let startTime, endTime;
-
-    // Handle time range
-    switch (range) {
-      case 'today':
-        startTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
-        break;
-
-      case 'yesterday':
-        startTime = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1, 0, 0, 0);
-        endTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
-
-        const [yesterdayRows] = await dbPool.execute(
-          `SELECT id, timestamp, image_url, detected_objects, confidence
-           FROM camera_detections
-           WHERE timestamp >= ? AND timestamp < ?
-           ORDER BY timestamp DESC`,
-          [startTime, endTime]
-        );
-
-        // Map fields for frontend
-        return res.json(
-          yesterdayRows.map(row => ({
-            id: row.id,
-            timestamp: row.timestamp,
-            imageUrl: row.image_url,
-            detectedObjects: row.detected_objects,
-            confidence: row.confidence
-          }))
-        );
-
-      case 'week':
-        startTime = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-        break;
-
-      default:
-        startTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+    const { device, range = '24h', limit = '100' } = req.query;
+    
+    const hours = range === '24h' ? 24 : range === '48h' ? 48 : range === '7d' ? 168 : 24;
+    const limitNum = parseInt(limit) || 100;
+    
+    let query;
+    let params;
+    
+    if (device && device !== 'all') {
+      // Có filter device - dùng string interpolation cho LIMIT
+      query = `
+        SELECT id, device_name, status, mode, timestamp
+        FROM device_logs
+        WHERE timestamp >= DATE_SUB(NOW(), INTERVAL ${hours} HOUR)
+        AND device_name = ?
+        ORDER BY timestamp DESC
+        LIMIT ${limitNum}
+      `;
+      params = [device];
+    } else {
+      // Không filter device
+      query = `
+        SELECT id, device_name, status, mode, timestamp
+        FROM device_logs
+        WHERE timestamp >= DATE_SUB(NOW(), INTERVAL ${hours} HOUR)
+        ORDER BY timestamp DESC
+        LIMIT ${limitNum}
+      `;
+      params = [];
     }
-
-    const [rows] = await dbPool.execute(
-      `SELECT id, timestamp, image_url, detected_objects, confidence
-       FROM camera_detections
-       WHERE timestamp >= ?
-       ORDER BY timestamp DESC`,
-      [startTime]
-    );
-
-    res.json(
-      rows.map(row => ({
-        id: row.id,
-        timestamp: row.timestamp,
-        imageUrl: row.image_url,
-        detectedObjects: row.detected_objects,
-        confidence: row.confidence
-      }))
-    );
-
+    
+    const [rows] = await dbPool.execute(query, params);
+    res.json(rows);
   } catch (error) {
     console.error('API Error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
 
-
-// POST /api/camera/detection - Save new detection (from AI service)
-app.post('/api/camera/detection', async (req, res) => {
+// GET /api/alerts
+app.get('/api/alerts', async (req, res) => {
   try {
-    const { imageUrl, detectedObjects, confidence } = req.body;
+    const { type, resolved, range = '7d', limit = '100' } = req.query;
     
-    if (!imageUrl || !detectedObjects) {
-      return res.status(400).json({ error: 'Missing required fields' });
+    const hours = range === '24h' ? 24 : range === '48h' ? 48 : range === '7d' ? 168 : 168;
+    const limitNum = parseInt(limit) || 100;
+    
+    let query = `
+      SELECT id, alert_type, severity, message, sensor_value, resolved, resolved_at, created_at
+      FROM alerts
+      WHERE created_at >= DATE_SUB(NOW(), INTERVAL ${hours} HOUR)
+    `;
+    const params = [];
+    
+    if (type && type !== 'all') {
+      query += ' AND alert_type = ?';
+      params.push(type);
     }
     
-    const [result] = await dbPool.execute(
-      'INSERT INTO camera_detections (image_url, detected_objects, confidence) VALUES (?, ?, ?)',
-      [imageUrl, detectedObjects, confidence || 0.0]
+    if (resolved !== undefined && resolved !== 'all') {
+      query += ' AND resolved = ?';
+      params.push(resolved === 'true' ? 1 : 0);
+    }
+    
+    query += ` ORDER BY created_at DESC LIMIT ${limitNum}`;
+    
+    const [rows] = await dbPool.execute(query, params);
+    res.json(rows);
+  } catch (error) {
+    console.error('API Error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// PUT /api/alerts/:id/resolve
+app.put('/api/alerts/:id/resolve', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    await dbPool.execute(
+      'UPDATE alerts SET resolved = TRUE, resolved_at = NOW() WHERE id = ?',
+      [id]
     );
     
-    // Broadcast to all connected clients
-    io.emit('camera:detection', {
-      id: result.insertId,
-      imageUrl,
-      detectedObjects,
-      confidence,
-      timestamp: new Date()
-    });
-    
-    res.json({ success: true, id: result.insertId });
+    res.json({ success: true });
   } catch (error) {
     console.error('API Error:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -531,7 +525,7 @@ io.on('connection', (socket) => {
 
     if (device === 'ledBedRoom') {
       systemState.devices.ledBedRoom = value;
-
+      await logDeviceAction('ledBedRoom', value, 'manual');
       // Send to ESP32
       wss.clients.forEach((wsClient) => {
         if (wsClient.readyState === WebSocket.OPEN) {
@@ -545,7 +539,7 @@ io.on('connection', (socket) => {
 
     if (device === 'camBuzzer') {
       systemState.devices.camBuzzer = value;
-
+      await logDeviceAction('camBuzzer', value, 'manual');
       // Send to ESP32
       wss.clients.forEach((wsClient) => {
         if (wsClient.readyState === WebSocket.OPEN) {
@@ -580,12 +574,6 @@ io.on('connection', (socket) => {
     });
 
     io.emit("mode:update", systemState.autoModes);
-  });
-
-  socket.on('camera:refresh', () => {
-    const timestamp = Date.now();
-    systemState.cameraImageUrl = `http://192.168.43.168:5000/stream?t=${timestamp}`;
-    socket.emit('camera:update', systemState.cameraImageUrl);
   });
 
   socket.on('disconnect', () => {
@@ -636,23 +624,41 @@ wss.on('connection', (ws) => {
 
       // Update device states from ESP32
       if (data.doorOpen !== undefined) {
+        if(systemState.devices.doorOpen != data.doorOpen){
+          await logDeviceAction('doorOpen', value, systemState.autoModes.autoDoor?'auto':'manual');
+        }
         systemState.devices.doorOpen = data.doorOpen;
         systemState.doorPosition = data.doorPosition || systemState.doorPosition;
       }
       if (data.roofOpen !== undefined) {
+        if(systemState.devices.roofOpen != data.roofOpen){
+          await logDeviceAction('roofOpen', value, systemState.autoModes.autoRoof?'auto':'manual');
+        }
         systemState.devices.roofOpen = data.roofOpen;
         systemState.roofPosition = data.roofPosition || systemState.roofPosition;
       }
       if (data.ledPIR !== undefined) {
+        if(systemState.devices.ledPIR != data.ledPIR){
+          await logDeviceAction('ledPIR', value, systemState.autoModes.autoPIR?'auto':'manual');
+        }
         systemState.devices.ledPIR = data.ledPIR;
       }
       if (data.gasBuzzer !== undefined) {
+        if(systemState.devices.gasBuzzer != data.gasBuzzer){
+          await logDeviceAction('gasBuzzer', value, systemState.autoModes.autoGasBuzzer?'auto':'manual');
+        }
         systemState.devices.gasBuzzer = data.gasBuzzer;
       }
       if (data.ledBedRoom !== undefined) {
+        if(systemState.devices.ledBedRoom != data.ledBedRoom){
+          await logDeviceAction('ledBedRoom', value, 'manual');
+        }
         systemState.devices.ledBedRoom = data.ledBedRoom;
       }
       if (data.camBuzzer !== undefined) {
+        if(systemState.devices.camBuzzer != data.camBuzzer){
+          await logDeviceAction('camBuzzer', value, 'manual');
+        }
         systemState.devices.camBuzzer = data.camBuzzer;
       }
 
@@ -738,7 +744,6 @@ wss.on('connection', (ws) => {
 });
 
 setInterval(() => {
-  //console.log("🔥 Sending state to clients:", systemState);
   io.emit('state:sync', systemState);
 }, 1000);
 
